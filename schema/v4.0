@@ -1,0 +1,17 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/whisk/skadnetwork/schema/v4.0",
+    "title": "Apple SKAdNetwork Postback Version 4.0",
+    "description": "",
+    "type": "object",
+    "properties": {
+      "version": {
+        "type": "string",
+        "enum": ["4.0"]
+      },
+      "ad-network-id": {
+        "type": "string"
+      }
+    },
+    "required": ["version", "ad-network-id"]
+  }
