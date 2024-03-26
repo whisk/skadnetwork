@@ -5,6 +5,7 @@ import "fmt"
 type ValidationError struct {
 	message string
 	fmt.Stringer
+	error
 }
 
 func NewValidatiorError(msg string) ValidationError {

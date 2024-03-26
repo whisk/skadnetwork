@@ -4,20 +4,30 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
+	"github.com/spf13/pflag"
 	skadnetwork "github.com/whisk/skadnetwork/pkg"
 )
 
 func main() {
-	validator := skadnetwork.NewPostbackValidator()
-	postback, err := readAllFromFile("testdata/com.example-4.0.json")
-	if err != nil {
-		fmt.Println("error while reading postback: ", err)
+	pflag.Parse()
+	if pflag.NArg() < 1 {
+		fmt.Printf("Usage:\n")
+		fmt.Printf("\t%s <FILE>\n", filepath.Base(os.Args[0]))
+		pflag.PrintDefaults()
 		os.Exit(1)
 	}
+	filename := pflag.Arg(0)
+	postback, err := readAllFromFile(filename)
+	if err != nil {
+		fmt.Println("error while reading postback:", err)
+		os.Exit(1)
+	}
+	validator := skadnetwork.NewPostbackValidator()
 	ok, err := validator.Validate(postback)
 	if err != nil {
-		fmt.Println("error while validating: ", err)
+		fmt.Println("error while validating:", err)
 		os.Exit(1)
 	}
 	if !ok {
