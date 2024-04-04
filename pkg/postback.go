@@ -1,9 +1,14 @@
 package skadnetwork
 
 import (
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Apple's NIST P-256 public key
@@ -38,7 +43,23 @@ func NewPostback(bytes []byte) (Postback, error) {
 }
 
 func (p Postback) VerifySignature() (bool, error) {
-	return true, nil
+	signableString := p.signableString()
+	publicKey, err := p.publicKey()
+	if err != nil {
+		return false, err
+	}
+
+	attrSign, _ := p.fields["attribution-signature"].(string)
+	attrSignBytes, err := base64.StdEncoding.DecodeString(attrSign)
+	if err != nil {
+		return false, err
+	}
+
+	hash := sha256.Sum256([]byte(signableString))
+	if ecdsa.VerifyASN1(publicKey, hash[:], attrSignBytes) {
+		return true, nil
+	}
+	return false, errors.New("invalid signature")
 }
 
 func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
@@ -55,4 +76,89 @@ func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
 		return false, nil, err
 	}
 	return schemaHelper.Validate(p)
+}
+
+func (p Postback) publicKey() (*ecdsa.PublicKey, error) {
+	var publicKeyBytes []byte
+	var err error
+	switch p.fields["version"] {
+	case "4.0":
+		fallthrough
+	case "3.0":
+		fallthrough
+	case "2.1":
+		publicKeyBytes, err = base64.StdEncoding.DecodeString(APPLE_PUBLIC_KEY_21)
+	case "2.0":
+		publicKeyBytes, err = base64.StdEncoding.DecodeString(APPLE_PUBLIC_KEY_20)
+	case "1.0":
+		publicKeyBytes, err = base64.StdEncoding.DecodeString(APPLE_PUBLIC_KEY_10)
+	default:
+		err = errors.New("undefined or unsupported version")
+	}
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := x509.ParsePKIXPublicKey(publicKeyBytes)
+	if err != nil {
+		return nil, errors.New("failed to parse public key: " + err.Error())
+	}
+	ecdsaKey, ok := pubKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("not an ECDSA public key")
+	}
+
+	return ecdsaKey, nil
+}
+
+func (p Postback) signableString() string {
+	var partNames []string
+	switch p.fields["version"] {
+	case "4.0":
+		partNames = []string{
+			"version",
+			"ad-network-id",
+			"source-identifier",
+			"app-id",
+			"transaction-id",
+			"redownload",
+			"source-app-id", "source-domain", // mutually exclusive
+			"fidelity-type",
+			"did-win",
+			"postback-sequence-index",
+		}
+	case "3.0":
+	case "2.1":
+	case "2.0":
+	case "1.0":
+	}
+
+	parts := []string{}
+	for _, name := range partNames {
+		fieldVal, ok := p.fields[name]
+		if !ok {
+			// skip non-existing fields
+			continue
+		}
+
+		var strVal string
+		switch v := (fieldVal).(type) {
+		case string:
+			strVal = v
+		case int, uint:
+			strVal = fmt.Sprintf("%d", v)
+		case float64:
+			strVal = fmt.Sprintf("%0.0f", v)
+		case bool:
+			if v {
+				strVal = "true"
+			} else {
+				strVal = "false"
+			}
+		default:
+			strVal = fmt.Sprintf("%s_has_unsupported_type_%T", name, v)
+		}
+		parts = append(parts, strVal)
+	}
+
+	return strings.Join(parts, "\u2063")
 }
