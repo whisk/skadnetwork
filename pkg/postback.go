@@ -27,7 +27,7 @@ var supportedVersions = map[string]bool{"2.2": true, "3.0": true, "4.0": true}
 
 type Postback struct {
 	bytes  []byte
-	fields map[string]any
+	params map[string]any
 }
 
 func NewPostback(bytes []byte) (Postback, error) {
@@ -38,7 +38,7 @@ func NewPostback(bytes []byte) (Postback, error) {
 		return p, err
 	}
 	p.bytes = bytes
-	p.fields = fields
+	p.params = fields
 	return p, nil
 }
 
@@ -49,7 +49,7 @@ func (p Postback) VerifySignature() (bool, error) {
 		return false, err
 	}
 
-	attrSign, _ := p.fields["attribution-signature"].(string)
+	attrSign, _ := p.params["attribution-signature"].(string)
 	attrSignBytes, err := base64.StdEncoding.DecodeString(attrSign)
 	if err != nil {
 		return false, err
@@ -63,7 +63,7 @@ func (p Postback) VerifySignature() (bool, error) {
 }
 
 func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
-	version, ok := p.fields["version"]
+	version, ok := p.params["version"]
 	if !ok {
 		return false, nil, errors.New("no version information found")
 	}
@@ -79,9 +79,14 @@ func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
 }
 
 func (p Postback) publicKey() (*ecdsa.PublicKey, error) {
+	version, ok := p.params["version"]
+	if !ok {
+		return nil, errors.New("version not defined")
+	}
+
 	var publicKeyBytes []byte
 	var err error
-	switch p.fields["version"] {
+	switch version {
 	case "4.0":
 		fallthrough
 	case "3.0":
@@ -93,18 +98,18 @@ func (p Postback) publicKey() (*ecdsa.PublicKey, error) {
 	case "1.0":
 		publicKeyBytes, err = base64.StdEncoding.DecodeString(APPLE_PUBLIC_KEY_10)
 	default:
-		err = errors.New("undefined or unsupported version")
+		err = fmt.Errorf("version %s is not supported", p.params["version"])
 	}
 	if err != nil {
 		return nil, err
 	}
 	pubKey, err := x509.ParsePKIXPublicKey(publicKeyBytes)
 	if err != nil {
-		return nil, errors.New("failed to parse public key: " + err.Error())
+		return nil, fmt.Errorf("failed to parse Apple public key: %w. This is probably a bug", err)
 	}
 	ecdsaKey, ok := pubKey.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, errors.New("not an ECDSA public key")
+		return nil, errors.New("key is not an ECDSA public key. This is probably a bug")
 	}
 
 	return ecdsaKey, nil
@@ -112,7 +117,7 @@ func (p Postback) publicKey() (*ecdsa.PublicKey, error) {
 
 func (p Postback) signableString() string {
 	var partNames []string
-	switch p.fields["version"] {
+	switch p.params["version"] {
 	case "4.0":
 		partNames = []string{
 			"version",
@@ -127,6 +132,17 @@ func (p Postback) signableString() string {
 			"postback-sequence-index",
 		}
 	case "3.0":
+		partNames = []string{
+			"version",
+			"ad-network-id",
+			"campaign-id",
+			"app-id",
+			"transaction-id",
+			"redownload",
+			"source-app-id",
+			"fidelity-type",
+			"did-win",
+		}
 	case "2.1":
 	case "2.0":
 	case "1.0":
@@ -134,7 +150,7 @@ func (p Postback) signableString() string {
 
 	parts := []string{}
 	for _, name := range partNames {
-		fieldVal, ok := p.fields[name]
+		fieldVal, ok := p.params[name]
 		if !ok {
 			// skip non-existing fields
 			continue

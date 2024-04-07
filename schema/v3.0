@@ -1,24 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/whisk/skadnetwork/main/schema/v4.0",
-  "title": "Apple SKAdNetwork Postback Version 4.0",
+  "$id": "https://raw.githubusercontent.com/whisk/skadnetwork/main/schema/v3.0",
+  "title": "Apple SKAdNetwork Postback Version 3.0",
   "description": "",
   "type": "object",
   "properties": {
     "version": {
       "type": "string",
       "enum": [
-        "4.0"
+        "3.0"
       ]
     },
     "ad-network-id": {
       "type": "string"
     },
-    "source-identifier": {
-      "type": "string",
-      "minLength": 2,
-      "maxLength": 4,
-      "pattern": "^[0-9]+$"
+    "campaign-id": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 99
     },
     "app-id": {
       "type": "integer",
@@ -30,10 +29,6 @@
     },
     "redownload": {
       "type": "boolean"
-    },
-    "source-domain": {
-      "type": "string",
-      "format": "hostname"
     },
     "fidelity-type": {
       "type": "integer",
@@ -48,19 +43,6 @@
       "minimum": 0,
       "maximum": 63
     },
-    "coarse-conversion-value": {
-      "type": "string",
-      "enum": [
-        "low",
-        "medium",
-        "high"
-      ]
-    },
-    "postback-sequence-index": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 2
-    },
     "attribution-signature": {
       "type": "string"
     }
@@ -68,12 +50,11 @@
   "required": [
     "version",
     "ad-network-id",
-    "source-identifier",
+    "campaign-id",
     "app-id",
     "transaction-id",
     "redownload",
     "fidelity-type",
-    "did-win",
-    "postback-sequence-index"
+    "did-win"
   ]
 }
