@@ -3,7 +3,6 @@ package skadnetwork
 import (
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,19 +10,7 @@ import (
 	"strings"
 )
 
-// Apple's NIST P-256 public key
-// https://developer.apple.com/documentation/storekit/skadnetwork/verifying_an_install-validation_postback
-const APPLE_PUBLIC_KEY_21 = `MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWdp8GPcGqmhgzEFj9Z2nSpQVddayaPe4FMzqM9wib1+aHaaIzoHoLN9zW4K8y4SPykE3YVK3sVqW6Af0lfx3gg==`
-
-// Apple's P-192 public key
-// https://developer.apple.com/documentation/storekit/skadnetwork/skadnetwork_release_notes/skadnetwork_2_release_notes
-const APPLE_PUBLIC_KEY_20 = `MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEMyHD625uvsmGq4C43cQ9BnfN2xslVT5V1nOmAMP6qaRRUll3PB1JYmgSm+62sosG`
-
-// Apple's P-192 public key
-// https://developer.apple.com/documentation/storekit/skadnetwork/skadnetwork_release_notes/skadnetwork_1_release_notes
-const APPLE_PUBLIC_KEY_10 = `MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEMyHD625uvsmGq4C43cQ9BnfN2xslVT5V1nOmAMP6qaRRUll3PB1JYmgSm+62sosG`
-
-var supportedVersions = map[string]bool{"2.2": true, "3.0": true, "4.0": true}
+var supportedVersions = map[string]bool{"2.1": true, "2.2": true, "3.0": true, "4.0": true}
 
 type Postback struct {
 	bytes  []byte
@@ -44,7 +31,11 @@ func NewPostback(bytes []byte) (Postback, error) {
 
 func (p Postback) VerifySignature() (bool, error) {
 	signableString := p.signableString()
-	publicKey, err := p.publicKey()
+	version, ok := p.params["version"].(string)
+	if !ok {
+		return false, errors.New("invalid version")
+	}
+	publicKey, err := publicKey(version)
 	if err != nil {
 		return false, err
 	}
@@ -56,10 +47,7 @@ func (p Postback) VerifySignature() (bool, error) {
 	}
 
 	hash := sha256.Sum256([]byte(signableString))
-	if ecdsa.VerifyASN1(publicKey, hash[:], attrSignBytes) {
-		return true, nil
-	}
-	return false, errors.New("invalid signature")
+	return ecdsa.VerifyASN1(publicKey, hash[:], attrSignBytes), nil
 }
 
 func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
@@ -76,43 +64,6 @@ func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
 		return false, nil, err
 	}
 	return schemaHelper.Validate(p)
-}
-
-func (p Postback) publicKey() (*ecdsa.PublicKey, error) {
-	version, ok := p.params["version"]
-	if !ok {
-		return nil, errors.New("version not defined")
-	}
-
-	var publicKeyBytes []byte
-	var err error
-	switch version {
-	case "4.0":
-		fallthrough
-	case "3.0":
-		fallthrough
-	case "2.1":
-		publicKeyBytes, err = base64.StdEncoding.DecodeString(APPLE_PUBLIC_KEY_21)
-	case "2.0":
-		publicKeyBytes, err = base64.StdEncoding.DecodeString(APPLE_PUBLIC_KEY_20)
-	case "1.0":
-		publicKeyBytes, err = base64.StdEncoding.DecodeString(APPLE_PUBLIC_KEY_10)
-	default:
-		err = fmt.Errorf("version %s is not supported", p.params["version"])
-	}
-	if err != nil {
-		return nil, err
-	}
-	pubKey, err := x509.ParsePKIXPublicKey(publicKeyBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse Apple public key: %w. This is probably a bug", err)
-	}
-	ecdsaKey, ok := pubKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("key is not an ECDSA public key. This is probably a bug")
-	}
-
-	return ecdsaKey, nil
 }
 
 func (p Postback) signableString() string {
