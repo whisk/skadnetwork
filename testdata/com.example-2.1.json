@@ -1,0 +1,11 @@
+{
+    "version": "2.1",
+    "ad-network-id": "com.example",
+    "campaign-id": 42,
+    "transaction-id": "6aafb7a5-0170-41b5-bbe4-fe71dedf1e28",
+    "app-id": 525463029,
+    "attribution-signature": "MEUCID6rbq3qt4GvFaAaynh5/LAcvn1d8CQTRhrZhLIxLKntAiEAo7IrvoMw6u2qDg6Tr5vIsEHXjlLkPlCOL0ojJcEh3Qw=",
+    "redownload": true,
+    "source-app-id": 1234567891,
+    "conversion-value": 20
+}

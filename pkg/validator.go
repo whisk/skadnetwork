@@ -30,7 +30,14 @@ func (v *PostbackValidator) Validate(bytes []byte) (bool, error) {
 	}
 
 	ok, err = p.VerifySignature()
-	return ok, err
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		v.errors = []ValidationError{NewValidatiorError("invalid signature")}
+		return false, nil
+	}
+	return true, nil
 }
 
 func (v *PostbackValidator) ValidateString(s string) (bool, error) {

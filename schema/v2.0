@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/whisk/skadnetwork/main/schema/v2.0",
+  "title": "Apple SKAdNetwork Postback Version 2.0 and 2.1",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": [
+        "2.0",
+        "2.1"
+      ]
+    },
+    "ad-network-id": {
+      "type": "string"
+    },
+    "campaign-id": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 99
+    },
+    "app-id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "transaction-id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "redownload": {
+      "type": "boolean"
+    },
+    "conversion-value": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 63
+    },
+    "attribution-signature": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "ad-network-id",
+    "campaign-id",
+    "app-id",
+    "transaction-id",
+    "redownload"
+  ]
+}

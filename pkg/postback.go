@@ -94,8 +94,31 @@ func (p Postback) signableString() string {
 			"fidelity-type",
 			"did-win",
 		}
+	case "2.2":
+		// see https://developer.apple.com/documentation/storekit/skadnetwork/verifying_an_install-validation_postback/combining_parameters_for_previous_skadnetwork_postback_versions#3761660
+		partNames = []string{
+			"version",
+			"ad-network-id",
+			"campaign-id",
+			"app-id",
+			"transaction-id",
+			"redownload",
+			"source-app-id",
+			"fidelity-type",
+		}
 	case "2.1":
+		fallthrough
 	case "2.0":
+		// see https://developer.apple.com/documentation/storekit/skadnetwork/verifying_an_install-validation_postback/combining_parameters_for_previous_skadnetwork_postback_versions#3626226
+		partNames = []string{
+			"version",
+			"ad-network-id",
+			"campaign-id",
+			"app-id",
+			"transaction-id",
+			"redownload",
+			"source-app-id",
+		}
 	case "1.0":
 	}
 
