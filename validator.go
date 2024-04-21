@@ -19,25 +19,25 @@ func main() {
 		os.Exit(1)
 	}
 	filename := pflag.Arg(0)
-	postback, err := readAllFromFile(filename)
+	jsonBytes, err := readAllFromFile(filename)
 	if err != nil {
-		fmt.Println("error while reading postback:", err)
+		fmt.Fprintf(os.Stderr, "Error while reading postback: %s\n", err)
 		os.Exit(1)
 	}
 	validator := skadnetwork.NewPostbackValidator()
-	ok, err := validator.Validate(postback)
+	ok, err := validator.Validate(jsonBytes)
 	if err != nil {
-		fmt.Println("error while validating:", err)
+		fmt.Fprintf(os.Stderr, "Error validating postback: %s\n", err)
 		os.Exit(1)
 	}
 	if !ok {
-		fmt.Println("postback is not valid. Errors found:")
-		for i, e := range validator.Errors() {
-			fmt.Printf("#%d. %s\n", i+1, e.String())
+		fmt.Println("Postback is not valid. Errors found:")
+		for _, e := range validator.Errors() {
+			fmt.Println(e.Error())
 		}
 		os.Exit(1)
 	}
-	fmt.Println("postback is valid")
+	fmt.Println("Postback is valid")
 }
 
 func readAllFromFile(name string) ([]byte, error) {

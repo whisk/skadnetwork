@@ -1,4 +1,6 @@
-package skadnetwork // import "github.com/whisk/skadnetwork/pkg"
+package skadnetwork
+
+import "errors"
 
 type Validator interface {
 	Validate([]byte) (bool, error)
@@ -11,21 +13,33 @@ type PostbackValidator struct {
 	Validator
 }
 
+// NewPostbackValidator returns a new validator for SKAdNetwork postbacks.
 func NewPostbackValidator() Validator {
 	return &PostbackValidator{}
 }
 
+// Validate validates given postback presented as JSON bytes.
 func (v *PostbackValidator) Validate(bytes []byte) (bool, error) {
+	v.errors = []ValidationError{}
 	p, err := NewPostback(bytes)
 	if err != nil {
 		return false, err
 	}
-	ok, validatationErrors, err := p.ValidateSchema()
+
+	ok, err := p.CheckVersion()
 	if err != nil {
 		return false, err
 	}
 	if !ok {
-		v.errors = validatationErrors
+		return false, errors.New("version not supported")
+	}
+
+	ok, validationErrors, err := p.ValidateSchema()
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		v.errors = append(v.errors, validationErrors...)
 		return false, nil
 	}
 
@@ -40,10 +54,13 @@ func (v *PostbackValidator) Validate(bytes []byte) (bool, error) {
 	return true, nil
 }
 
+// ValidateString validates given postback presented as JSON string.
 func (v *PostbackValidator) ValidateString(s string) (bool, error) {
 	return v.Validate([]byte(s))
 }
 
+// Errors returns all validation errors found by [Validate]. Calling this function does not reset the errors,
+// but they will be reset on a subsequent calls to [Validate].
 func (v *PostbackValidator) Errors() []ValidationError {
 	errors := v.errors
 	v.errors = nil

@@ -17,25 +17,48 @@ type Postback struct {
 	params map[string]any
 }
 
+// NewPostback returns a new postback from given JSON bytes presentation
 func NewPostback(bytes []byte) (Postback, error) {
 	var p Postback
-	var fields map[string]any
-	err := json.Unmarshal(bytes, &fields)
+	var params map[string]any
+	err := json.Unmarshal(bytes, &params)
 	if err != nil {
 		return p, err
 	}
 	p.bytes = bytes
-	p.params = fields
+	p.params = params
 	return p, nil
 }
 
-func (p Postback) VerifySignature() (bool, error) {
-	signableString := p.signableString()
+// NewPostbackFromString returns a new postback from JSON string presentation
+func NewPostbackFromString(s string) (Postback, error) {
+	return NewPostback([]byte(s))
+}
+
+// CheckVersion checks if postback version is supported.
+func (p Postback) CheckVersion() (bool, error) {
 	version, ok := p.params["version"].(string)
 	if !ok {
-		return false, errors.New("invalid version")
+		return false, errors.New("no version information found")
 	}
-	publicKey, err := publicKey(version)
+	_, ok = supportedVersions[version]
+	if !ok {
+		return false, errors.New("version not supported")
+	}
+	return true, nil
+}
+
+// versionString returns string representation of postback version. Returns an empty string if
+// no version data found.
+func (p Postback) versionString() string {
+	return p.params["version"].(string)
+}
+
+// VerifySignature verifies postback cryptographic signature. Returns an error if the version is not
+// supported or the signature has an invalid format.
+func (p Postback) VerifySignature() (bool, error) {
+	signableString := p.signableString()
+	publicKey, err := publicKey(p.versionString())
 	if err != nil {
 		return false, err
 	}
@@ -50,16 +73,11 @@ func (p Postback) VerifySignature() (bool, error) {
 	return ecdsa.VerifyASN1(publicKey, hash[:], attrSignBytes), nil
 }
 
+// ValidateSchema checks postback structure using JSON schema. Returns a slice of validation errors,
+// which is empty if the postback is valid.
+// Returns an error if the validation itself has failed.
 func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
-	version, ok := p.params["version"]
-	if !ok {
-		return false, nil, errors.New("no version information found")
-	}
-	versionStr, _ := version.(string)
-	if !supportedVersions[versionStr] {
-		return false, nil, fmt.Errorf("validation of version %s is not supported", version)
-	}
-	schemaHelper, err := NewSchemaHelper(versionStr)
+	schemaHelper, err := NewSchemaHelper(p.versionString())
 	if err != nil {
 		return false, nil, err
 	}
@@ -124,14 +142,14 @@ func (p Postback) signableString() string {
 
 	parts := []string{}
 	for _, name := range partNames {
-		fieldVal, ok := p.params[name]
+		paramVal, ok := p.params[name]
 		if !ok {
 			// skip non-existing fields
 			continue
 		}
 
 		var strVal string
-		switch v := (fieldVal).(type) {
+		switch v := (paramVal).(type) {
 		case string:
 			strVal = v
 		case int, uint:

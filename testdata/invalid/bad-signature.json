@@ -1,0 +1,14 @@
+{
+    "version": "4.0",
+    "ad-network-id": "com.example",
+    "source-identifier": "5239",
+    "app-id": 525463029,
+    "transaction-id": "6aafb7a5-0170-41b5-bbe4-fe71dedf1e30",
+    "redownload": false,
+    "source-domain": "example.com",
+    "fidelity-type": 1,
+    "did-win": true,
+    "conversion-value": 63,
+    "postback-sequence-index": 0,
+    "attribution-signature": "LG8/RzRyQ0lEUDZ3dDM3Q2JkaVY1RjljO3BYeGhjXyQwUHlXbDReZ0NwfSkvSD9oM3I5cWBuNjRpVUZbIXE2R0h4OD99Q3xQ"
+}

@@ -1,8 +1,6 @@
 package skadnetwork
 
 import (
-	"path/filepath"
-
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -12,11 +10,7 @@ type SchemaHelper struct {
 
 func NewSchemaHelper(version string) (SchemaHelper, error) {
 	var helper SchemaHelper
-	schemaPath, err := filepath.Abs("schema/v" + version)
-	if err != nil {
-		return helper, err
-	}
-	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
+	schemaLoader := gojsonschema.NewReferenceLoader("https://raw.githubusercontent.com/whisk/skadnetwork/main/schema/v" + version)
 	schema, err := gojsonschema.NewSchema(schemaLoader)
 	if err != nil {
 		return helper, err
