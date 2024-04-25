@@ -1,36 +1,40 @@
 package skadnetwork
 
-import "errors"
-
-type Validator interface {
-	Validate([]byte) (bool, error)
-	ValidateString(string) (bool, error)
-	Errors() []ValidationError
-}
+import (
+	"errors"
+)
 
 type PostbackValidator struct {
 	errors []ValidationError
-	Validator
 }
 
 // NewPostbackValidator returns a new validator for SKAdNetwork postbacks.
-func NewPostbackValidator() Validator {
-	return &PostbackValidator{}
+func NewPostbackValidator() PostbackValidator {
+	return PostbackValidator{}
 }
 
-// Validate validates given postback presented as JSON bytes.
+// Validate performs all validations for a given postback presented as JSON bytes:
+//  - JSON schema validation according to the postback version
+//  - signature verification
+// Validate returns the validation result and an error. Non-nil error indicates that the validation itself
+// has failed and we are not sure if the postback is valid or not.
 func (v *PostbackValidator) Validate(bytes []byte) (bool, error) {
 	v.errors = []ValidationError{}
 	p, err := NewPostback(bytes)
 	if err != nil {
-		return false, err
+		// error when initializing the postback means it is invalid
+		v.errors = append(v.errors, NewValidationError(err.Error()))
+		return false, nil
 	}
 
-	ok, err := p.CheckVersion()
+	ok, err := p.VersionSupported()
 	if err != nil {
-		return false, err
+		// error when checking for the version means the postback is invalid
+		v.errors = append(v.errors, NewValidationError(err.Error()))
+		return false, nil
 	}
 	if !ok {
+		// unsupported version means we can't say if it is valid or not
 		return false, errors.New("version not supported")
 	}
 
@@ -48,7 +52,7 @@ func (v *PostbackValidator) Validate(bytes []byte) (bool, error) {
 		return false, err
 	}
 	if !ok {
-		v.errors = []ValidationError{NewValidatiorError("invalid signature")}
+		v.errors = []ValidationError{NewValidationError("invalid signature")}
 		return false, nil
 	}
 	return true, nil

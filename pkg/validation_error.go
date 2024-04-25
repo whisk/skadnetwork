@@ -4,7 +4,7 @@ type ValidationError struct {
 	message string
 }
 
-func NewValidatiorError(msg string) ValidationError {
+func NewValidationError(msg string) ValidationError {
 	return ValidationError{message: msg}
 }
 

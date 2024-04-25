@@ -35,17 +35,14 @@ func NewPostbackFromString(s string) (Postback, error) {
 	return NewPostback([]byte(s))
 }
 
-// CheckVersion checks if postback version is supported.
-func (p Postback) CheckVersion() (bool, error) {
+// VersionSupported checks if postback version is supported.
+func (p Postback) VersionSupported() (bool, error) {
 	version, ok := p.params["version"].(string)
 	if !ok {
 		return false, errors.New("no version information found")
 	}
 	_, ok = supportedVersions[version]
-	if !ok {
-		return false, errors.New("version not supported")
-	}
-	return true, nil
+	return ok, nil
 }
 
 // versionString returns string representation of postback version. Returns an empty string if
@@ -77,11 +74,11 @@ func (p Postback) VerifySignature() (bool, error) {
 // which is empty if the postback is valid.
 // Returns an error if the validation itself has failed.
 func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
-	schemaHelper, err := NewSchemaHelper(p.versionString())
+	schemaHelper, err := newSchemaHelper(p.versionString())
 	if err != nil {
 		return false, nil, err
 	}
-	return schemaHelper.Validate(p)
+	return schemaHelper.validate(p)
 }
 
 func (p Postback) signableString() string {
