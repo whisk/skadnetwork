@@ -60,6 +60,21 @@ func TestReferencePostbacks(t *testing.T) {
 	}
 }
 
+func TestPostbackInit(t *testing.T) {
+	v := skadnetwork.NewPostbackValidator()
+	assert.IsType(t, skadnetwork.PostbackValidator{}, v)
+	err := v.Init([]byte(`{"version":"3.0"}`))
+	assert.NoError(t, err)
+}
+
+func TestPostbackSupportedVersion(t *testing.T) {
+	v := skadnetwork.NewPostbackValidator()
+	_ = v.Init([]byte(`{"version":"3.0"}`))
+	ok, err := v.VersionSupported()
+	assert.NoError(t, err)
+	assert.True(t, ok)
+}
+
 func readAllFromFile(name string) ([]byte, error) {
 	file, err := os.Open(name)
 	if err != nil {

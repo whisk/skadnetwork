@@ -20,19 +20,8 @@ func TestPostbackStub(t *testing.T) {
 }
 
 func TestPostbackVersion(t *testing.T) {
-	p, err := skadnetwork.NewPostback([]byte(`{"version":"3.0"}`))
-	assert.NoError(t, err)
-	assert.IsType(t, skadnetwork.Postback{}, p)
-	ok, err := p.VersionSupported()
-	assert.NoError(t, err)
+	p, _ := skadnetwork.NewPostback([]byte(`{"version":"3.0"}`))
+	v, ok := p.Version()
 	assert.True(t, ok)
-}
-
-func TestPostbackNotSupportedVersion(t *testing.T) {
-	p, err := skadnetwork.NewPostback([]byte(`{"version":"5.0"}`))
-	assert.NoError(t, err)
-	assert.IsType(t, skadnetwork.Postback{}, p)
-	ok, err := p.VersionSupported()
-	assert.NoError(t, err)
-	assert.False(t, ok)
+	assert.Equal(t, v, "3.0")
 }

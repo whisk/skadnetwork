@@ -5,12 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 )
-
-var supportedVersions = map[string]bool{"2.1": true, "2.2": true, "3.0": true, "4.0": true}
 
 type Postback struct {
 	bytes  []byte
@@ -35,23 +32,20 @@ func NewPostbackFromString(s string) (Postback, error) {
 	return NewPostback([]byte(s))
 }
 
-// VersionSupported checks if postback version is supported.
-func (p Postback) VersionSupported() (bool, error) {
-	version, ok := p.params["version"].(string)
-	if !ok {
-		return false, errors.New("no version information found")
-	}
-	_, ok = supportedVersions[version]
-	return ok, nil
+func (p Postback) Version() (string, bool) {
+	v1, ok1 := p.params["version"]
+	v2, ok2 := v1.(string)
+	return v2, ok1 && ok2
 }
 
 // versionString returns string representation of postback version. Returns an empty string if
 // no version data found.
 func (p Postback) versionString() string {
-	return p.params["version"].(string)
+	v, _ := p.Version()
+	return v
 }
 
-// VerifySignature verifies postback cryptographic signature. Returns an error if the version is not
+// VerifySignature verifies the postback cryptographic signature. Returns an error if the version is not
 // supported or the signature has an invalid format.
 func (p Postback) VerifySignature() (bool, error) {
 	signableString := p.signableString()
@@ -70,7 +64,7 @@ func (p Postback) VerifySignature() (bool, error) {
 	return ecdsa.VerifyASN1(publicKey, hash[:], attrSignBytes), nil
 }
 
-// ValidateSchema checks postback structure using JSON schema. Returns a slice of validation errors,
+// ValidateSchema checks the postback structure using JSON schema. Returns a slice of validation errors,
 // which is empty if the postback is valid.
 // Returns an error if the validation itself has failed.
 func (p Postback) ValidateSchema() (bool, []ValidationError, error) {
